@@ -1,0 +1,12 @@
+Creating volume in remote host
+---------------------------------------
+
+docker volume create -d vieux/sshfs -o sshcmd=mydocker@35.229.209.195:/home/mydocker/docker -o password=mydocker my_html
+
+docker run -it --rm -p 80:80 -v my_html:/usr/test c2aa7e16edd8 /bin/bash
+
+docker run -it --rm -p 80:80 --mount type=volume,volume-driver=vieux/sshfs,source=my_html,target=/usr/local/apache2/htdocs/ c2aa7e16edd8   /bin/bash
+
+
+Some error
+--------
