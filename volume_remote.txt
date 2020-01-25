@@ -9,4 +9,15 @@ docker run -it --rm -p 80:80 --mount type=volume,volume-driver=vieux/sshfs,sourc
 
 
 Some error
---------
+--------'
+root@861c296990fd:/usr/local/apache2/htdocs# httpd-foreground 
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 172.17.0.2. Set the 'ServerName' directive globally to suppress this message
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 172.17.0.2. Set the 'ServerName' directive globally to suppress this message
+[Fri Jan 24 12:43:12.857556 2020] [mpm_event:notice] [pid 9:tid 140336347591808] AH00489: Apache/2.4.41 (Unix) configured -- resuming normal operations
+[Fri Jan 24 12:43:12.857894 2020] [core:notice] [pid 9:tid 140336347591808] AH00094: Command line: 'httpd -D FOREGROUND'
+[Fri Jan 24 12:44:31.668797 2020] [core:error] [pid 12:tid 140336337700608] (13)Permission denied: [client 157.45.233.121:24496] AH00035: access to / denied (filesystem path '/usr/local/apache2/htdocs') because search permissions are missing on a component of the path
+157.45.233.121 - - [24/Jan/2020:12:44:31 +0000] "GET / HTTP/1.1" 403 199
+[Fri Jan 24 12:45:07.489444 2020] [core:error] [pid 13:tid 140336337700608] (13)Permission denied: [client 157.45.233.121:18532] AH00035: access to / denied (filesystem path '/usr/local/apache2/htdocs') because search permissions are missing on a component of the path
+157.45.233.121 - - [24/Jan/2020:12:45:07 +0000] "GET / HTTP/1.1" 403 199
+[Fri Jan 24 12:46:43.429888 2020] [core:error] [pid 13:tid 140336320898816] (13)Permission denied: [client 157.45.233.121:19051] AH00035: access to / denied (filesystem path '/usr/local/apache2/htdocs') because search permissions are missing on a component of the path
+157.45.233.121 - - [24/Jan/2020:12:46:43 +0000] "GET / HTTP/1.1" 403 199
