@@ -1,0 +1,55 @@
+awsElasticBlockStore
+azureDisk
+azureFile
+cephfs
+cinder
+configMap
+csi
+downwardAPI
+emptyDir
+fc (fibre channel)
+flexVolume
+flocker
+gcePersistentDisk
+gitRepo (deprecated)
+glusterfs
+hostPath
+iscsi
+local
+nfs
+persistentVolumeClaim
+projected
+portworxVolume
+quobyte
+rbd
+scaleIO
+secret
+storageos
+vsphereVolume
+
+-----------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mc1
+spec:
+  volumes:
+  - name: html    # Volume Name
+    emptyDir: {}  # Type of volume, it may be secret, configMap, hostPath
+  containers:
+  - name: 1st     # First container name
+    image: nginx  # First container image
+    volumeMounts: # The volume which will be mounted inside container from available volumes
+    - name: html  # Name of the volume, must be same as the volume name in .spec.volumes[].name
+      mountPath: /usr/share/nginx/html  # The path inside the container where volume will be mounted
+  - name: 2nd     # Second container name
+    image: debian # Second container image
+    volumeMounts: # The volume which will be mounted inside container from available volumes
+    - name: html  # Name of the volume, must be same as the volume name in .spec.volumes[].name
+      mountPath: /html # The path inside the container where volume will be mounted
+    command: ["/bin/sh", "-c"] # The shell inside the container where the command will be executed [like ENTRYPOINT in docker]
+    args:      # The arguments to command it means the real commands which will run inside shell executable. [like CMD in docker]
+      - while true; do
+          date >> /html/index.html;
+          sleep 1;
+        done
