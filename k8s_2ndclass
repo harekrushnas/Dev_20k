@@ -1,0 +1,101 @@
+kubeadm allows us to upgrade our cluster components in the proper order, making sure to include important feature upgrades we might want to take advantage of in the latest stable version of Kubernetes. In this lesson, we will go through upgrading our cluster from version 1.15.9 to 1.16.6.
+Get the version of the API server:
+# kubectl version --short
+View the version of kubelet:
+# kubectl describe nodes
+View the version of controller-manager pod:
+# kubectl get po [controller_pod_name] -o yaml -n kube-system
+Release the hold on versions of kubeadm and kubelet:
+# sudo apt-mark unhold kubeadm kubelet
+Install version 1.16.6 of kubeadm:
+# sudo apt install -y kubeadm=1.16.6-00
+Hold the version of kubeadm at 1.16.6:
+# sudo apt-mark hold kubeadm
+Verify the version of kubeadm:
+# kubeadm version
+Plan the upgrade of all the controller components:
+# sudo kubeadm upgrade plan
+Upgrade the controller components:
+# sudo kubeadm upgrade apply <version>
+Show what differences would be applied to existing static pod manifests. See also: kubeadm upgrade apply –dry-run
+# kubeadm upgrade diff [version] [flags]
+Release the hold on the version of kubectl:
+# sudo apt-mark unhold kubectl
+Upgrade kubectl:
+# sudo apt install -y kubectl=1.16.6-00
+Hold the version of kubectl at 1.16.6:
+# sudo apt-mark hold kubectl
+Upgrade the version of kubelet:
+# sudo apt install -y kubelet=1.16.6-00
+Hold the version of kubelet at 1.16.6:
+# sudo apt-mark hold kubelet
+When we need to take a node down for maintenance, Kubernetes makes it easy to evict
+the pods on that node, take it down, and then continue scheduling pods after the
+maintenance is complete. Furthermore, if the node needs to be decommissioned, you
+can just as easily remove the node and replace it with a new one, joining it to the
+cluster.
+See which pods are running on which nodes:
+#kubectl get pods -o wide
+Evict the pods on a node:
+# kubectl drain [node_name] --ignore-daemonsets
+Watch as the node changes status:
+# kubectl get nodes -w
+Schedule pods to the node after maintenance is complete:
+# kubectl uncordon [node_name]
+Remove a node from the cluster:
+# kubectl delete node [node_name]
+Generate a new token:
+# sudo kubeadm token generate
+List the tokens:
+# sudo kubeadm token list
+Print the kubeadm join command to join a node to the cluster:
+# sudo kubeadm token create [token_name] --ttl 2h --print-join-command
+# Use an alternative editor
+  KUBE_EDITOR="nano" kubectl edit svc/docker-registry
+Upgrading Kubernetes cluster from 1.15 to 1.16
+Ref: https://v1-16.docs.kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/
+       Node Capacity
+---------------------------
+|     kube-reserved       |
+|-------------------------|
+|     system-reserved     |
+|-------------------------|
+|    eviction-threshold   |
+|-------------------------|
+|                         |
+|        allocatable      |
+|    (available for pods) |
+|                         |
+|                         |
+---------------------------
+Allocatable on a Kubernetes node is defined as the amount of compute resources that are available for pods. The scheduler does not over-subscribe Allocatable. CPU, memory and ephemeral-storage are supported as of now.
+kube-reserved is meant to capture resource reservation for kubernetes system daemons like the kubelet, container runtime, node problem detector, etc. It is not meant to reserve resources for system daemons that are run as pods. kube-reserved is typically a function of pod density on the nodes.
+In addition to cpu, memory, and ephemeral-storage, pid may be specified to reserve the specified number of process IDs for kubernetes system daemons.
+system-reserved is meant to capture resource reservation for OS system daemons like sshd, udev, etc. system-reserved should reserve memory for the kernel too since kernel memory is not accounted to pods in Kubernetes at this time. Reserving resources for user login sessions is also recommended (user.slice in systemd world).
+In addition to cpu, memory, and ephemeral-storage, pid may be specified to reserve the specified number of process IDs for OS system daemons.
+reserved-cpus is meant to define an explicit CPU set for OS system daemons and kubernetes system daemons. reserved-cpus is for systems that do not intend to define separate top level cgroups for OS system daemons and kubernetes system daemons with regard to cpuset resource. If the Kubelet does not have --system-reserved-cgroup and --kube-reserved-cgroup, the explicit cpuset provided by reserved-cpus will take precedence over the CPUs defined by --kube-reserved and --system-reserved options.
+Memory pressure at the node level leads to System OOMs which affects the entire node and all pods running on it. Nodes can go offline temporarily until memory has been reclaimed. To avoid (or reduce the probability of) system OOMs kubelet provides Out of Resource management. Evictions are supported for memory and ephemeral-storage only. By reserving some memory via --eviction-hard flag, the kubelet attempts to evict pods whenever memory availability on the node drops below the reserved value. Hypothetically, if system daemons did not exist on a node, pods cannot use more than capacity - eviction-hard. For this reason, resources reserved for evictions are not available for pods.
+The kubelet running on each node has a pod limit (default is 110) which limits the number of pods that can be ran on a node. Reaching this limit means that no more pods will be able to be scheduled. When figuring out how many pods can be ran on each node, remember to look at pods from all namespaces, because system DNS and networking pods count towards the limit.
+Ref: https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#node-allocatable
+There are two ways to avoid hitting the pod-per-node limit:
+Add more nodes: by adding more nodes to the cluster, pods can be scheduled on the new nodes
+Modify the kubelet command: the kubelet command on the node can be ran with the --max-pods argument to specify the number of max pods on that node
+To have a simple view the most of parts of HA will be skipped to describe Kubelet<->Controller Manager communication only.
+By default the normal behavior looks like:
+Kubelet updates it status to apiserver periodically, as specified by --node-status-update-frequency. The default value is 10s.
+Kubernetes controller manager checks the statuses of Kubelet every –-node-monitor-period. The default value is 5s.
+In case the status is updated within --node-monitor-grace-period of time, Kubernetes controller manager considers healthy status of Kubelet. The default value is 40s.
+Kubernetes controller manager and Kubelet work asynchronously. It means that the delay may include any network latency, API Server latency, etcd latency, latency caused by load on one's master nodes and so on. So if --node-status-update-frequency is set to 5s in reality it may appear in etcd in 6-7 seconds or even longer when etcd cannot commit data to quorum nodes.
+****************                      *************
+*Node Condition*	                  *Description*
+****************                      *************
+>>OutOfDisk<<	          True if there is insufficient free space on the node for adding new pods, otherwise False
+>>Ready<<	              True if the node is healthy and ready to accept pods, False if the node is not healthy and is not accepting pods, and Unknown                           if the node controller has not heard from the node in the last node-monitor-grace-period (default is 40 seconds)
+>>MemoryPressure<<	      True if pressure exists on the node memory – that is, if the node memory is low; otherwise False
+>>PIDPressure<<	          True if pressure exists on the processes – that is, if there are too many processes on the node; otherwise False
+>>DiskPressure<<	      True if pressure exists on the disk size – that is, if the disk capacity is low; otherwise False
+>>NetworkUnavailable<<	  True if the network for the node is not correctly configured, otherwise False
+***********
+*Hugepages*
+***********
+HugePages is a feature integrated into the Linux kernel 2.6. Enabling HugePages makes it possible for the operating system to support memory pages greater than the default (usually 4 KB). Using very large page sizes can improve system performance by reducing the amount of system resources required to access page table entries. HugePages is useful for both 32-bit and 64-bit configurations. HugePage sizes vary from 2 MB to 256 MB, depending on the kernel version and the hardware architecture. For Oracle Databases, using HugePages reduces the operating system maintenance of page states, and increases Translation Lookaside Buffer (TLB) hit ratio.
